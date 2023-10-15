@@ -1,15 +1,16 @@
 import { Packet, Serialize } from '../BasePacket'
 import { OfflinePacket } from './OfflinePacket'
 import { Magic } from '../types'
-import { Long } from 'binary-stream'
+import { Long, LitString } from 'binary-stream'
 
-@Packet(0x01)
-class UnconnectedPing extends OfflinePacket {
+@Packet(0x1c)
+class UnconnectedPong extends OfflinePacket {
   @Serialize(Long) public time!: bigint
+  @Serialize(Long) public serverGuid!: bigint
   @Serialize(Magic) public magic!: Buffer
-  @Serialize(Long) public guid!: bigint
+  @Serialize(LitString) public motd!: string
 }
 
 export {
-  UnconnectedPing,
+  UnconnectedPong,
 }
