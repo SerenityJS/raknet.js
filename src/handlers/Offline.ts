@@ -1,8 +1,8 @@
-import type { Raknet } from './Raknet'
+import type { Raknet } from '../Raknet'
 import type { RemoteInfo } from 'node:dgram'
 
-import { udpHeaderSize, maxMtuSize } from './constants'
-import { Connection } from './connection'
+import { udpHeaderSize, maxMtuSize } from '../constants'
+import { Connection } from '../connection'
 import {
   UnconnectedPing,
   UnconnectedPong,
@@ -10,7 +10,7 @@ import {
   OpenConnectionReply1,
   OpenConnectionRequest2,
   OpenConnectionReply2,
-} from './packets'
+} from '../packets'
 
 class OfflineHandler {
   private readonly raknet: Raknet

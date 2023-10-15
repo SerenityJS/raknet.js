@@ -5,8 +5,8 @@ import type { BasePacket, GamePacket } from './packets'
 
 import { Socket, createSocket, RemoteInfo } from 'node:dgram'
 import { OfflinePacket, OnlinePacket, AcknowledgePacket } from './packets'
+import { OfflineHandler } from './handlers'
 import { Advertisement } from './advertisement'
-import { OfflineHandler } from './Offline'
 import { EventEmitter } from './utils'
 import { RaknetEvent } from './constants'
 
@@ -51,7 +51,7 @@ class Raknet extends EventEmitter<RaknetEvents> {
       // Start the update interval, TODO move elsewhere
       this.interval = setInterval(() => {
         for (const connection of this.connections.values()) {
-          connection.update()
+          connection.online.update()
         }
       }, 10)
 
@@ -91,7 +91,7 @@ class Raknet extends EventEmitter<RaknetEvents> {
       if (!connection) return console.log('Unknown connection with info:', rinfo)
 
       // Frame the packet
-      const frameSet = connection.framePacket(packet)
+      const frameSet = connection.online.framePacket(packet)
       if (!frameSet) return console.log('Failed to frame packet:', packet)
 
       // Send it
@@ -110,7 +110,7 @@ class Raknet extends EventEmitter<RaknetEvents> {
       const connection = [...this.connections.values()]
         .find((x) => x.getAddress() === rinfo.address && x.getPort() === rinfo.port)
       if (!connection) return console.log('Unknown connection with info:', rinfo)
-      connection.handleBuffer(buffer)
+      connection.online.handleBuffer(buffer)
     }
   }
 
