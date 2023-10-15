@@ -1,7 +1,7 @@
 import { Packet, Serialize } from '../../BasePacket'
 import { OfflinePacket } from '../OfflinePacket'
 import { Address, Magic } from '../../types'
-import { Short, Long, Bool } from 'binary-stream'
+import { Short, Long, Bool } from 'binarystream.js'
 
 @Packet(0x08)
 class OpenConnectionReply2 extends OfflinePacket {

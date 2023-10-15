@@ -1,4 +1,4 @@
-import { Type, BinaryStream } from 'binary-stream'
+import { Type, BinaryStream } from 'binarystream.js'
 import { Address } from './Address'
 
 class SysAddress extends Type {

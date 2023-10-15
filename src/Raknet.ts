@@ -5,6 +5,7 @@ import type { BasePacket, GamePacket } from './packets'
 
 import { Socket, createSocket, RemoteInfo } from 'node:dgram'
 import { OfflinePacket, OnlinePacket, AcknowledgePacket } from './packets'
+import { Advertisement } from './advertisement'
 import { OfflineHandler } from './Offline'
 import { EventEmitter } from './utils'
 import { RaknetEvent } from './constants'
@@ -17,28 +18,59 @@ interface RaknetEvents {
 }
 
 class Raknet extends EventEmitter<RaknetEvents> {
+  public readonly protocol: number
+  public readonly version: string
+  public readonly maxPlayers: number
   public readonly socket: Socket
   public readonly guid: bigint
   public readonly offline: OfflineHandler
   public readonly connections: Map<bigint, Connection>
+  public readonly advertisement: Advertisement
 
-  public constructor() {
+  private interval!: NodeJS.Timeout
+
+  public constructor(protocol: number, version: string, maxPlayers = 20) {
     super()
+    this.protocol = protocol
+    this.version = version
+    this.maxPlayers = maxPlayers
     this.socket = createSocket('udp4')
     this.guid = Buffer.allocUnsafe(8).readBigInt64BE()
     this.offline = new OfflineHandler(this)
     this.connections = new Map()
+    this.advertisement = new Advertisement(this)
   }
 
-  public listen(address: string, port: number) {
+  public listen(address: string, port: number): Socket | undefined {
     try {
       // Binds the socket
       this.socket.bind(port, address)
         .on('message', this.handleMessage.bind(this))
         .on('listening', this.handleListening.bind(this))
+
+      // Start the update interval, TODO move elsewhere
+      this.interval = setInterval(() => {
+        for (const connection of this.connections.values()) {
+          connection.update()
+        }
+      }, 10)
+
+      return this.socket
     } catch (error) {
       console.error('Failed to bind socket:', error)
     }
+  }
+
+  public close(): Socket {
+    // Stop the update interval
+    clearInterval(this.interval)
+    // Disconnect all connections
+    for (const connection of this.connections.values()) {
+      connection.disconnect()
+    }
+
+    // Close the socket
+    return this.socket.close()
   }
 
   public getConnectionFromRinfo(rinfo: RemoteInfo): Connection | undefined {
@@ -86,11 +118,6 @@ class Raknet extends EventEmitter<RaknetEvents> {
     this.emit(RaknetEvent.Listening)
 
     // TODO: Move elsewhere
-    setInterval(() => {
-      for (const connection of this.connections.values()) {
-        connection.update()
-      }
-    }, 10)
   }
 }
 

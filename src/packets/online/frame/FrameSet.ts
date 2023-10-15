@@ -3,7 +3,7 @@ import type { Frame } from './Frame'
 import { Packet, Serialize } from '../../BasePacket'
 import { OnlinePacket } from '../OnlinePacket'
 import { Frames } from '../../types'
-import { UInt24LE } from 'binary-stream'
+import { UInt24LE } from 'binarystream.js'
 
 @Packet(0x80)
 class FrameSet extends OnlinePacket {

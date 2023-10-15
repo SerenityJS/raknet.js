@@ -1,4 +1,4 @@
-import { Type, BinaryStream } from 'binary-stream'
+import { Type, BinaryStream } from 'binarystream.js'
 import { Frame } from '../online/frame/Frame'
 
 class Frames extends Type {

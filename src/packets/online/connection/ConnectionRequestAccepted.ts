@@ -1,7 +1,7 @@
 import { Packet, Serialize } from '../../BasePacket'
 import { OnlinePacket } from '../OnlinePacket'
 import { Address, SysAddress } from '../../types'
-import { Long, Short } from 'binary-stream'
+import { Long, Short } from 'binarystream.js'
 
 @Packet(0x10)
 class ConnectionRequestAccepted extends OnlinePacket {

@@ -1,5 +1,5 @@
 import { Packet, Serialize} from '../../BasePacket'
-import { UInt8 } from 'binary-stream'
+import { UInt8 } from 'binarystream.js'
 import { Binary } from '../../types'
 import { OnlinePacket } from '../OnlinePacket'
 

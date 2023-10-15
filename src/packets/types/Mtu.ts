@@ -1,4 +1,4 @@
-import { Type, BinaryStream } from 'binary-stream'
+import { Type, BinaryStream } from 'binarystream.js'
 
 class Mtu extends Type {
   public static read(stream: BinaryStream): number {

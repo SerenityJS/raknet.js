@@ -1,8 +1,8 @@
 import { Raknet } from './Raknet'
 import { RaknetEvent } from './constants'
-import { BinaryStream } from 'binary-stream'
+import { BinaryStream } from 'binarystream.js'
 
-const server = new Raknet()
+const server = new Raknet(618, '1.20.32')
 
 server.listen('127.0.0.1', 19132)
 

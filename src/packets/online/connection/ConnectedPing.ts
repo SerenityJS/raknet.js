@@ -1,6 +1,6 @@
 import { Packet, Serialize } from '../../BasePacket'
 import { OnlinePacket } from '../OnlinePacket'
-import { Long } from 'binary-stream'
+import { Long } from 'binarystream.js'
 
 @Packet(0x00)
 class ConnectedPing extends OnlinePacket {

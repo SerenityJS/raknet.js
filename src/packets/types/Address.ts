@@ -1,4 +1,4 @@
-import { Type, BinaryStream } from 'binary-stream'
+import { Type, BinaryStream } from 'binarystream.js'
 
 class Address extends Type {
   public static read(stream: BinaryStream): { address: string, port: number, version: number } {

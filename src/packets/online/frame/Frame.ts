@@ -1,4 +1,4 @@
-import { BinaryStream } from 'binary-stream'
+import { BinaryStream } from 'binarystream.js'
 import { PacketReliability } from '../../../constants'
 
 class Frame {

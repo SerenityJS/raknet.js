@@ -34,7 +34,7 @@ class OfflineHandler {
     const pong = new UnconnectedPong()
     pong.time = ping.time
     pong.serverGuid = this.raknet.guid
-    pong.motd = 'MCPE;Raknet.js;560;1.19.51;0;20;' + this.raknet.guid + ';Second line;Creative;'
+    pong.motd = this.raknet.advertisement.offlineMessage()
     this.raknet.sendPacket(pong, rinfo)
   }
 

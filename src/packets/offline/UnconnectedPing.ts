@@ -1,7 +1,7 @@
 import { Packet, Serialize } from '../BasePacket'
 import { OfflinePacket } from './OfflinePacket'
 import { Magic } from '../types'
-import { Long } from 'binary-stream'
+import { Long } from 'binarystream.js'
 
 @Packet(0x01)
 class UnconnectedPing extends OfflinePacket {

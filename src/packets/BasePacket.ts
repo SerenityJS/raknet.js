@@ -1,4 +1,4 @@
-import { BinaryStream, Type, LitString } from 'binary-stream'
+import { BinaryStream, Type, LitString } from 'binarystream.js'
 
 abstract class BasePacket extends BinaryStream {
   public static id: number

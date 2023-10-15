@@ -1,6 +1,6 @@
 import { Packet } from '../BasePacket'
 import { AcknowledgePacket } from './AcknowledgePacket'
-import { BinaryStream } from 'binary-stream'
+import { BinaryStream } from 'binarystream.js'
 
 @Packet(0xc0)
 class Ack extends AcknowledgePacket {

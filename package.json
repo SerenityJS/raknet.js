@@ -12,7 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "binary-stream": "file:../BinaryStreamJS",
+    "binarystream.js": "^0.1.0",
     "cross-env": "^7.0.3",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^10.9.1",
