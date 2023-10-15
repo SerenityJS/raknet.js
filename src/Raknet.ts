@@ -14,7 +14,7 @@ interface RaknetEvents {
   [RaknetEvent.Listening]: []
   [RaknetEvent.ConnectionOpened]: [Connection]
   [RaknetEvent.ConnectionClosed]: [Connection]
-  [RaknetEvent.GamePacket]: [GamePacket, Connection]
+  [RaknetEvent.GamePacket]: [Buffer, number, Connection]
 }
 
 class Raknet extends EventEmitter<RaknetEvents> {

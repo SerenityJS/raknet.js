@@ -18,12 +18,14 @@ server.on(RaknetEvent.ConnectionClosed, (connection) => {
   console.log(`Connection closed from ${connection.getAddress()}:${connection.getPort()}`)
 })
 
-server.on(RaknetEvent.GamePacket, (packet, connection) => {
-  const stream = new BinaryStream(packet.body)
-  stream.readUInt8() // Skip the game packet header
-  const bytes = stream.readUInt8() // Amount of bytes in the packet
-  const id = stream.readUInt8() // ID of the packet
+server.on(RaknetEvent.GamePacket, (bin, size, connection) => {
+  console.log(bin.byteLength === size)
+  console.log('size:', size, 'bin:', bin)
+  // const stream = new BinaryStream(packet.body)
+  // stream.readUInt8() // Skip the game packet header
+  // const bytes = stream.readUInt8() // Amount of bytes in the packet
+  // const id = stream.readUInt8() // ID of the packet
   
-  // First packet of the minecraft login sequence
-  if (id === 0xC1) console.log('Got RequestNetworkSettings packet!', 'Size:', bytes)
+  // // First packet of the minecraft login sequence
+  // if (id === 0xC1) console.log('Got RequestNetworkSettings packet!', 'Size:', bytes)
 })

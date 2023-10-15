@@ -3,6 +3,7 @@ import type { Raknet } from '../Raknet'
 import type { BasePacket } from '../packets'
 
 import { Bitflags, PacketReliability, RaknetEvent } from '../constants'
+import { BinaryStream } from 'binarystream.js'
 import {
   Frame,
   FrameSet,
@@ -237,7 +238,10 @@ class OnlineHandler {
 
   private handleGamePacket(buffer: Buffer): void {
     const packet = new GamePacket(buffer).decode()
-    this.raknet.emit(RaknetEvent.GamePacket, packet, this.connection)
+    const stream = new BinaryStream(packet.body)
+    stream.skip(2)
+    const bin = stream.read(stream.getBuffer().byteLength - 2)
+    this.raknet.emit(RaknetEvent.GamePacket, bin, packet.size, this.connection)
   }
 }
 
