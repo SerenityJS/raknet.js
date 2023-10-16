@@ -1,4 +1,4 @@
-import { BinaryStream } from 'binarystream.js'
+import { BinaryStream, Endianness } from 'binarystream.js'
 import { PacketReliability } from '../../../constants'
 
 class Frame {
@@ -24,10 +24,10 @@ class Frame {
     const stream = new BinaryStream()
     stream.writeUInt8((this.reliability << 5) | (this.isFragmented() ? 0x10 : 0))
     stream.writeUShort(this.body.length << 3)
-    if (this.isReliable()) stream.writeUInt24LE(this.reliableIndex)
-    if (this.isSequenced()) stream.writeUInt24LE(this.sequenceIndex)
+    if (this.isReliable()) stream.writeUInt24(this.reliableIndex, Endianness.Little)
+    if (this.isSequenced()) stream.writeUInt24(this.sequenceIndex, Endianness.Little)
     if (this.isOrdered()) {
-      stream.writeUInt24LE(this.orderingIndex)
+      stream.writeUInt24(this.orderingIndex, Endianness.Little)
       stream.writeUInt8(this.orderingChannel)
     }
     if (this.isFragmented()) {
@@ -45,10 +45,10 @@ class Frame {
     this.reliability = (this.header & 0xe0) >> 5
     this.split = (this.header & 0x10)
     this.length = Math.ceil(this.stream.readUShort() / 8)
-    if (this.isReliable()) this.reliableIndex = this.stream.readUInt24LE()
-    if (this.isSequenced()) this.sequenceIndex = this.stream.readUInt24LE()
+    if (this.isReliable()) this.reliableIndex = this.stream.readUInt24(Endianness.Little)
+    if (this.isSequenced()) this.sequenceIndex = this.stream.readUInt24(Endianness.Little)
     if (this.isOrdered()) {
-      this.orderingIndex = this.stream.readUInt24LE()
+      this.orderingIndex = this.stream.readUInt24(Endianness.Little)
       this.orderingChannel = this.stream.readUInt8()
     }
     if (this.split > 0) {

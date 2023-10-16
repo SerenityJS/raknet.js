@@ -1,4 +1,4 @@
-import { BinaryStream, Type, LitString } from 'binarystream.js'
+import { BinaryStream, Type, Endianness } from 'binarystream.js'
 
 abstract class BasePacket extends BinaryStream {
   public static id: number
@@ -23,16 +23,16 @@ abstract class BasePacket extends BinaryStream {
 function Packet(id: number) {
   return function(target: typeof BasePacket) {
     target.id = id
-    const metadata = Reflect.getOwnMetadata('properties', target.prototype) as { name: string, type: typeof Type }[]
-    
+    const metadata = Reflect.getOwnMetadata('properties', target.prototype) as { name: string, type: typeof Type, endian: Endianness }[]
+
     const properties = Object.getOwnPropertyNames(target.prototype)
     if (!properties.includes('encode'))
       target.prototype.encode = function() {
         this.writeUInt8(id)
 
         if (!metadata) return this.getBuffer()
-        for (const { name, type } of metadata) {
-          type.write(this, (this as any)[name])
+        for (const { name, type, endian } of metadata) {
+          type.write(this, (this as any)[name], endian)
         }
 
         return this.getBuffer()
@@ -42,8 +42,8 @@ function Packet(id: number) {
         this.readUInt8()
 
         if (!metadata) return this
-        for (const { name, type } of metadata) {
-          (this as any)[name] = type.read(this)
+        for (const { name, type, endian } of metadata) {
+          (this as any)[name] = type.read(this, endian)
         }
 
         return this
@@ -55,12 +55,12 @@ function Packet(id: number) {
   }
 }
 
-function Serialize(type: typeof Type | typeof String) {
+function Serialize(type: typeof Type | typeof String, endian: Endianness = Endianness.Big) {
   if (!type) throw new Error('Type is required')
 
   return function(target: any, name: string) {
     const properties = Reflect.getOwnMetadata('properties', target) || []
-    properties.push({ name, type })
+    properties.push({ name, type, endian })
     Reflect.defineMetadata('properties', properties, target)
   }
 }

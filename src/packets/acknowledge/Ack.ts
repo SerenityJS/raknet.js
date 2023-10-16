@@ -1,6 +1,6 @@
 import { Packet } from '../BasePacket'
 import { AcknowledgePacket } from './AcknowledgePacket'
-import { BinaryStream } from 'binarystream.js'
+import { BinaryStream, Endianness } from 'binarystream.js'
 
 @Packet(0xc0)
 class Ack extends AcknowledgePacket {
@@ -27,12 +27,12 @@ class Ack extends AcknowledgePacket {
         } else if (diff > 1) {
           if (start === last) {
             stream.writeBool(true) // single?
-            stream.writeUInt24LE(start)
+            stream.writeUInt24(start, Endianness.Little)
             start = last = current
           } else {
             stream.writeBool(false) // single?
-            stream.writeUInt24LE(start)
-            stream.writeUInt24LE(last)
+            stream.writeUInt24(start, Endianness.Little)
+            stream.writeUInt24(last, Endianness.Little)
             start = last = current
           }
           ++records
@@ -42,11 +42,11 @@ class Ack extends AcknowledgePacket {
       // last iteration
       if (start === last) {
         stream.writeBool(true) // single?
-        stream.writeUInt24LE(start)
+        stream.writeUInt24(start, Endianness.Little)
       } else {
         stream.writeBool(false) // single?
-        stream.writeUInt24LE(start)
-        stream.writeUInt24LE(last)
+        stream.writeUInt24(start, Endianness.Little)
+        stream.writeUInt24(last, Endianness.Little)
       }
       ++records
 
@@ -65,10 +65,10 @@ class Ack extends AcknowledgePacket {
     for (let i = 0; i < recordCount; i++) {
       const range = this.readBool() // False for range, True for no range
       if (range) {
-        this.sequences.push(this.readUInt24LE())
+        this.sequences.push(this.readUInt24(Endianness.Little))
       } else {
-        const start = this.readUInt24LE()
-        const end = this.readUInt24LE()
+        const start = this.readUInt24(Endianness.Little)
+        const end = this.readUInt24(Endianness.Little)
         for (let i = start; i <= end; i++) {
           this.sequences.push(i)
         }
