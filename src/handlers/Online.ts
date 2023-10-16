@@ -21,6 +21,10 @@ class OnlineHandler {
   private readonly connection: Connection
   private readonly raknet: Raknet
 
+  // Fragments
+  private readonly fragmentQueue: Map<number, Map<number, Frame>>
+  private ourFragmentIndex: number
+
   // Frames
   public readonly receivedFrames: Set<number>
   public readonly lostFrames: Set<number> 
@@ -37,6 +41,10 @@ class OnlineHandler {
   public constructor(connection: Connection, raknet: Raknet) {
     this.connection = connection
     this.raknet = raknet
+
+    // Fragments
+    this.fragmentQueue = new Map()
+    this.ourFragmentIndex = 0
 
     // Frames
     this.receivedFrames = new Set()
@@ -120,11 +128,42 @@ class OnlineHandler {
   }
 
   private handleFrame(frame: Frame): void {
-    // TODO: Handle fragmented frames
-    if (frame.isFragmented()) return console.log('TODO: Fragmented frame:', frame.length)
-    // TODO: Handle sequenced frames
-    if (frame.isSequenced()) return console.log('TODO: Sequenced frame:', frame.length)
-    if (frame.isOrdered()) {
+    if (frame.isFragmented()) {
+      // Checks if the queue has the fragment
+      if (!this.fragmentQueue.has(frame.fragmentId)) {
+        // Creates and sets the fragment queue
+        this.fragmentQueue.set(frame.fragmentId, new Map([[frame.fragmentIndex, frame]]))
+      } else {
+        const value = this.fragmentQueue.get(frame.fragmentId)!
+        value.set(frame.fragmentIndex, frame)
+
+        // Checks if the fragment queue is complete
+        if (value.size === frame.fragmentSize) {
+          const stream = new BinaryStream()
+          for (let i = 0; i < frame.fragmentSize; i++) {
+            const split = value.get(i)!
+            stream.write(split.body)
+          }
+
+          // Build the new frame
+          const newFrame = new Frame()
+          newFrame.body = stream.getBuffer()
+          newFrame.reliability = frame.reliability
+          newFrame.orderingChannel = frame.orderingChannel
+          newFrame.orderingIndex = frame.orderingIndex
+          newFrame.sequenceIndex = frame.sequenceIndex
+          newFrame.reliableIndex = frame.reliableIndex
+          this.fragmentQueue.delete(frame.fragmentId)
+          
+          return this.handleFrame(newFrame)
+        }
+      }
+
+    } else if (frame.isSequenced()) {
+      if (frame.sequenceIndex < this.inHighestIndex[frame.orderingChannel] || frame.orderingIndex < this.inOrderingIndex[frame.orderingChannel]) {
+        return console.log('Out of order sequence:', frame.sequenceIndex)
+      }
+    } else if (frame.isOrdered()) {
       if (frame.orderingIndex === this.inOrderingIndex[frame.orderingChannel]) {
         this.inHighestIndex[frame.orderingChannel] = 0
         this.inOrderingIndex[frame.orderingChannel] = frame.orderingIndex + 1
