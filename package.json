@@ -17,5 +17,14 @@
     "reflect-metadata": "^0.1.13",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
-  }
+  },
+  "typings": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ]
 }

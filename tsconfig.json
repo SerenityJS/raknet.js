@@ -5,6 +5,7 @@
     "target": "esnext",
     "moduleDetection": "force",
     "outDir": "dist",
+    "declaration": true,
     "strict": true,
     "downlevelIteration": true,
     "skipLibCheck": true,
