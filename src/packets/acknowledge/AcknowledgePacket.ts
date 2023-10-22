@@ -1,6 +1,6 @@
-import { BasePacket } from '../BasePacket'
+import { DataPacket } from "../DataPacket"
 
-abstract class AcknowledgePacket extends BasePacket {
+abstract class AcknowledgePacket extends DataPacket {
   public static id: number
 }
 

@@ -1,4 +1,3 @@
-export * from './OfflinePacket'
 export * from './UnconnectedPing'
 export * from './UnconnectedPong'
 

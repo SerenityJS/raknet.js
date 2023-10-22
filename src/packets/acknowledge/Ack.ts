@@ -1,4 +1,4 @@
-import { Packet } from '../BasePacket'
+import { Packet } from '../DataPacket'
 import { AcknowledgePacket } from './AcknowledgePacket'
 import { BinaryStream, Endianness } from 'binarystream.js'
 
@@ -7,10 +7,9 @@ class Ack extends AcknowledgePacket {
   public sequences: number[] = []
 
   // Override encode due to custom logic, maybe move into own type?
-  public override encode(): Buffer {
+  public override serialize(): Buffer {
     this.writeUInt8(Ack.id)
     const stream = new BinaryStream()
-    this.sequences.sort((a, b) => a - b)
     const count = this.sequences.length
     let records = 0
 
@@ -58,7 +57,7 @@ class Ack extends AcknowledgePacket {
   }
 
   // Override decode due to custom logic, maybe move into own type?
-  public override decode(): this {
+  public override deserialize(): this {
     this.readUInt8()
     this.sequences = []
     const recordCount = this.readUShort()

@@ -1,13 +1,12 @@
-import { Packet, Serialize } from '../BasePacket'
-import { OfflinePacket } from './OfflinePacket'
-import { Magic } from '../types'
+import { Packet, DataPacket, Serialize } from '../DataPacket'
 import { Long } from 'binarystream.js'
+import { Magic } from '../types'
 
 @Packet(0x01)
-class UnconnectedPing extends OfflinePacket {
+class UnconnectedPing extends DataPacket {
   @Serialize(Long) public time!: bigint
   @Serialize(Magic) public magic!: Buffer
-  @Serialize(Long) public guid!: bigint
+  @Serialize(Long) public clientGuid!: bigint
 }
 
 export {

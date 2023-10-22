@@ -1,10 +1,9 @@
-import { Packet, Serialize } from '../../BasePacket'
-import { OfflinePacket } from '../OfflinePacket'
+import { Packet, Serialize, DataPacket } from '../../DataPacket'
 import { Address, Magic } from '../../types'
 import { Short, Long, Bool } from 'binarystream.js'
 
 @Packet(0x08)
-class OpenConnectionReply2 extends OfflinePacket {
+class OpenConnectionReply2 extends DataPacket {
   @Serialize(Magic) public magic!: Buffer
   @Serialize(Long) public serverGuid!: bigint
   @Serialize(Address) public clientAddress!: { address: string, port: number, version: number }

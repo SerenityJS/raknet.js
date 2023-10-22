@@ -1,126 +1,127 @@
-import 'reflect-metadata'
-
-import type { Connection } from './connection'
-import type { BasePacket, GamePacket } from './packets' 
-
+import { Bitflags, udpHeaderSize, maxMtuSize } from './constants'
+import { OfflineClient, Client, ClientStatus } from './client'
 import { Socket, createSocket, RemoteInfo } from 'node:dgram'
-import { OfflinePacket, OnlinePacket, AcknowledgePacket } from './packets'
-import { OfflineHandler } from './handlers'
-import { Advertisement } from './advertisement'
 import { EventEmitter } from './utils'
-import { RaknetEvent } from './constants'
+
+import {
+  UnconnectedPing,
+  OpenConnectionRequest1,
+  OpenConnectionRequest2,
+  ConnectionRequest,
+} from './packets'
+
+enum Gamemode {
+  Survival,
+  Creative,
+  Adventure,
+  Spectator,
+}
 
 interface RaknetEvents {
-  [RaknetEvent.Listening]: []
-  [RaknetEvent.ConnectionOpened]: [Connection]
-  [RaknetEvent.ConnectionClosed]: [Connection]
-  [RaknetEvent.GamePacket]: [Buffer, number, Connection]
+  Binary: [Buffer, RemoteInfo]
+  UnconnectedPing: [UnconnectedPing, RemoteInfo]
+  OpenConnectionRequest1: [OpenConnectionRequest1, RemoteInfo]
+  OpenConnectionRequest2: [OpenConnectionRequest2, RemoteInfo]
+  ConnectionRequest: [ConnectionRequest, Client]
+  ClientConnected: [Client]
+  ClientDisconnected: [Client, ClientStatus]
+  Encapsulated: [Buffer, Client]
+  Error: [...string[]]
 }
 
 class Raknet extends EventEmitter<RaknetEvents> {
   public readonly protocol: number
   public readonly version: string
-  public readonly maxPlayers: number
-  public readonly socket: Socket
-  public readonly guid: bigint
-  public readonly offline: OfflineHandler
-  public readonly connections: Map<bigint, Connection>
-  public readonly advertisement: Advertisement
+  public readonly maxClients: number
+  public readonly socket: Socket = createSocket('udp4')
+  public readonly guid: bigint = Buffer.allocUnsafe(8).readBigInt64BE()
+  public readonly tps = 10
+  public readonly clients = new Map<bigint, Client>()
 
-  private interval!: NodeJS.Timeout
+  public motd = 'Raknet.js'
+  public gamemode = Gamemode.Survival
+  protected interval: NodeJS.Timeout | null = null
 
-  public constructor(protocol: number, version: string, maxPlayers = 20) {
+  public constructor(protocol: number, version: string, maxClients: number = 20) {
     super()
     this.protocol = protocol
     this.version = version
-    this.maxPlayers = maxPlayers
-    this.socket = createSocket('udp4')
-    this.guid = Buffer.allocUnsafe(8).readBigInt64BE()
-    this.offline = new OfflineHandler(this)
-    this.connections = new Map()
-    this.advertisement = new Advertisement(this)
+    this.maxClients = maxClients
   }
 
-  public listen(address: string, port: number): Socket | undefined {
+  public start(address: string, port: number = 19132): Raknet {
     try {
-      // Binds the socket
-      this.socket.bind(port, address)
-        .on('message', this.handleMessage.bind(this))
-        .on('listening', this.handleListening.bind(this))
+      // Bind to the port
+      this.socket.bind(port, address)//.unref()
+        // Bind the listeners
+        .on('listening', () => {})
+        .on('close', () => {})
+        .on('error', (error: Error) => {
+          this.emit('Error', error.message, error.stack!)
+        })
+        .on('message', this.incoming.bind(this))
+      // Starts the raknet ticking interval
+      this.interval = setInterval(this.tick.bind(this), this.tps)
 
-      // Start the update interval, TODO move elsewhere
-      this.interval = setInterval(() => {
-        for (const connection of this.connections.values()) {
-          connection.online.update()
-        }
-      }, 10)
+      return this
+    } catch (error: any) {
+      this.emit('Error', error)
 
-      return this.socket
-    } catch (error) {
-      console.error('Failed to bind socket:', error)
+      return this
     }
   }
 
-  public close(): Socket {
-    // Stop the update interval
-    clearInterval(this.interval)
-    // Disconnect all connections
-    for (const connection of this.connections.values()) {
-      connection.disconnect()
-    }
-
+  public stop(): Raknet {
     // Close the socket
-    return this.socket.close()
+    this.socket.close()
+    // Clear the interval
+    if (this.interval) clearInterval(this.interval!)
+    // Disconnect all clients
+    for (const client of this.clients.values()) {
+      client.disconnect()
+    }
+
+    return this
   }
 
-  public getConnectionFromRinfo(rinfo: RemoteInfo): Connection | undefined {
-    return [...this.connections.values()]
-      .find((x) => x.getAddress() === rinfo.address && x.getPort() === rinfo.port)
-  }
-
-  public async sendPacket(packet: BasePacket, rinfo: RemoteInfo): Promise<void> {
-    if (packet instanceof OfflinePacket || packet instanceof AcknowledgePacket) {
-      // Handle offline & acknowledegement packet encoding
-      // Packet doesnt need to be framed, so send as is.
-      return this.socket.send(packet.encode(), rinfo.port, rinfo.address)
-    } else if (packet instanceof OnlinePacket) {
-      // Handle online packet encoding (frame this packet)
-      // Packet does need to be framed, so we need to frame it before sending.
-      // Framing needs to take place within the connection, as the sequence number is connection specific.
-      const connection = this.getConnectionFromRinfo(rinfo)
-      if (!connection) return console.log('Unknown connection with info:', rinfo)
-
-      // Frame the packet
-      const frameSet = connection.online.framePacket(packet)
-      if (!frameSet) return console.log('Failed to frame packet:', packet)
-
-      // Send it
-      return this.socket.send(frameSet.encode(), rinfo.port, rinfo.address)
-    } else {
-      // TODO: Handle custom packet encoding
-      console.log('Custom packet:', packet)
+  public tick(): void {
+    for (const client of this.clients.values()) {
+      // Checks if the client is in the process of disconnecting or is already disconnected.
+      if (
+        client.status === ClientStatus.Disconnecting || 
+        client.status === ClientStatus.Disconnected
+      ) continue
+      
+      // Tick the client
+      client.tick()
     }
   }
 
-  private handleMessage(buffer: Buffer, rinfo: RemoteInfo): void {
-    const header = buffer[0]
-    if ((header & 0x80) === 0) {
-      this.offline.handle(buffer, rinfo)
-    } else {
-      const connection = [...this.connections.values()]
-        .find((x) => x.getAddress() === rinfo.address && x.getPort() === rinfo.port)
-      if (!connection) return console.log('Unknown connection with info:', rinfo)
-      connection.online.handleBuffer(buffer)
-    }
+  public send(buffer: Buffer, address: string, port: number): void {
+    // Send raw data to the specified address and port.
+    this.socket.send(buffer, port, address)
   }
 
-  private handleListening(): void {
-    this.emit(RaknetEvent.Listening)
+  public async incoming(buffer: Buffer, remote: RemoteInfo): Promise<void> {
+    // Emit the binary event, if not, return.
+    const event = await this.emit('Binary', buffer, remote)
+    if (!event) return
 
-    // TODO: Move elsewhere
+    // Get the client, if not, handle offline client.
+    const client = [...this.clients.values()].find((x) => x.remote.address === remote.address && x.remote.port === remote.port)
+
+    // If a client exsis, let the client handle the incoming packet.
+    if (client && (buffer[0] & Bitflags.Valid) !== 0) return client.incoming(buffer)
+
+    // Check if we got an offline packet from a online user.
+    if ((buffer[0] & Bitflags.Valid) !== 0) return
+
+    // Handle the offline client.
+    return OfflineClient.incoming(this, buffer, remote)
   }
 }
 
 export {
   Raknet,
+  Gamemode,
 }
