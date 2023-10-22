@@ -27,6 +27,8 @@ interface RaknetEvents {
   ClientDisconnected: [Client, ClientStatus]
   Encapsulated: [Buffer, Client]
   Error: [...string[]]
+  Listening: []
+  Close: []
 }
 
 class Raknet extends EventEmitter<RaknetEvents> {
@@ -54,8 +56,8 @@ class Raknet extends EventEmitter<RaknetEvents> {
       // Bind to the port
       this.socket.bind(port, address)//.unref()
         // Bind the listeners
-        .on('listening', () => {})
-        .on('close', () => {})
+        .on('listening', this.emit.bind(this, 'Listening'))
+        .on('close', this.emit.bind(this, 'Close'))
         .on('error', (error: Error) => {
           this.emit('Error', error.message, error.stack!)
         })
