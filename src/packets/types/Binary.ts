@@ -1,6 +1,6 @@
-import { Type, BinaryStream } from 'binarystream.js'
+import { DataType, BinaryStream } from 'binarystream.js'
 
-class Binary extends Type {
+class Binary extends DataType {
   public static read(stream: BinaryStream): Buffer {
     return stream.getBuffer()
   }

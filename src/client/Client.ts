@@ -8,7 +8,6 @@ import {
   FrameSet,
   Disconnect,
 } from '../packets'
-import { BinaryStream } from 'binarystream.js'
 
 enum ClientStatus {
   Connecting,

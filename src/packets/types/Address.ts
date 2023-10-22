@@ -1,6 +1,6 @@
-import { Type, BinaryStream } from 'binarystream.js'
+import { DataType, BinaryStream } from 'binarystream.js'
 
-class Address extends Type {
+class Address extends DataType {
   public static read(stream: BinaryStream): { address: string, port: number, version: number } {
     const version = stream.readByte()
     if (version === 4) {

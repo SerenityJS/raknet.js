@@ -1,7 +1,7 @@
-import { Type, BinaryStream } from 'binarystream.js'
+import { DataType, BinaryStream } from 'binarystream.js'
 import { Address } from './Address'
 
-class SysAddress extends Type {
+class SysAddress extends DataType {
   public static read(stream: BinaryStream): { address: string, port: number, version: number }[] {
     const addresses: { address: string, port: number, version: number }[] = []
     for (let i = 0; i < 20; i++) {

@@ -1,7 +1,7 @@
-import { Type, BinaryStream } from 'binarystream.js'
+import { DataType, BinaryStream } from 'binarystream.js'
 import { Frame } from '../frames/Frame'
 
-class Frames extends Type {
+class Frames extends DataType {
   public static read(stream: BinaryStream): Frame[] {
     const frames: Frame[] = []
     do {

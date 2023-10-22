@@ -1,4 +1,4 @@
-import { BinaryStream, Type, Endianness, UInt8 } from 'binarystream.js'
+import { BinaryStream, DataType, Endianness, UInt8 } from 'binarystream.js'
 
 abstract class DataPacket extends BinaryStream {
   public static id: number
@@ -20,10 +20,10 @@ abstract class DataPacket extends BinaryStream {
   }
 }
 
-function Packet(id: number, type: typeof Type = UInt8) {
+function Packet(id: number, type: typeof DataType = UInt8) {
   return function(target: typeof DataPacket) {
     target.id = id
-    const metadata = Reflect.getOwnMetadata('properties', target.prototype) as { name: string, type: typeof Type, endian: Endianness }[]
+    const metadata = Reflect.getOwnMetadata('properties', target.prototype) as { name: string, type: typeof DataType, endian: Endianness }[]
     const properties = Object.getOwnPropertyNames(target.prototype)
 
     if (!properties.includes('serialize'))
@@ -53,7 +53,7 @@ function Packet(id: number, type: typeof Type = UInt8) {
   }
 }
 
-function Serialize(type: typeof Type | typeof String, endian: Endianness = Endianness.Big) {
+function Serialize(type: typeof DataType | typeof String, endian: Endianness = Endianness.Big) {
   if (!type) throw new Error('Type is required')
 
   return function(target: any, name: string) {

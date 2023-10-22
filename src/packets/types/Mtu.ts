@@ -1,6 +1,6 @@
-import { Type, BinaryStream } from 'binarystream.js'
+import { DataType, BinaryStream } from 'binarystream.js'
 
-class Mtu extends Type {
+class Mtu extends DataType {
   public static read(stream: BinaryStream): number {
     return stream.getBuffer().byteLength
   }
