@@ -20,7 +20,7 @@ class Frame {
     this.stream = stream ?? new BinaryStream()
   }
 
-  public serialize(): BinaryStream {
+  public serialize(): Buffer {
     const stream = new BinaryStream()
     stream.writeByte((this.reliability << 5) | (this.isFragmented() ? Bitflags.Split : 0))
     stream.writeUShort(this.body.byteLength << 3)
@@ -32,12 +32,12 @@ class Frame {
     }
     if (this.isFragmented()) {
       stream.writeInt32(this.fragmentSize)
-      stream.writeUShort(this.fragmentId)
+      stream.writeShort(this.fragmentId)
       stream.writeInt32(this.fragmentIndex)
     }
     stream.write(this.body)
 
-    return stream
+    return stream.getBuffer()
   }
 
   public deserialize(): this {
@@ -53,7 +53,7 @@ class Frame {
     }
     if (this.split > 0) {
       this.fragmentSize = this.stream.readInt32()
-      this.fragmentId = this.stream.readUShort()
+      this.fragmentId = this.stream.readShort()
       this.fragmentIndex = this.stream.readInt32()
     }
     this.body = this.stream.read(this.length)

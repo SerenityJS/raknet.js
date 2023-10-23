@@ -12,14 +12,24 @@ import {
   ConnectedPong,
   NewIncomingConnection,
   Disconnect,
+  Nack,
 } from '../packets'
-import { PacketReliability } from '../constants'
+import { PacketPriority, PacketReliability } from '../constants'
 
 const GameByte = 0xfe
 
 class Framer {
   private readonly raknet: Raknet
   private readonly client: Client
+
+  // Frame Queue
+  public outFrameQueue = new FrameSet()
+  public outFrame = 0
+  public outFrameReliability = 0
+  public outFrameFragmentIndex = 0
+  public readonly outFrameBackupQueue = new Map<number, Frame[]>()
+  public readonly outFrameOrderIndex: number[] = new Array(32).fill(0)
+  public readonly outFrameSequenceIndex: number[] = new Array(32).fill(0)
 
   // Fragments
   public readonly fragmentQueue: Map<number, Map<number, Frame>> = new Map()
@@ -28,9 +38,6 @@ class Framer {
   public readonly receivedFrames = new Set<number>()
   public readonly lostFrames = new Set<number>()
   public lastFrame = -1
-  public outFrameSets = new Map<number, { frameSet: FrameSet, ping: bigint }>()
-  public outFrameReliability = 0
-  public outFrame = 0
 
   // Ordering
   public readonly inOrderingQueue = new Map<number, Map<number, Frame>>()
@@ -47,48 +54,59 @@ class Framer {
     }
   }
 
+  public addFrameToQueue(frame: Frame, priority: PacketPriority): void {
+    let length = 4
+    // Checks if the frame size is larger then the mtu size.
+    for (const x of this.outFrameQueue?.frames ?? []) length += x.getByteLength()
+    if (length + frame.getByteLength() > this.client.mtuSize - 36) this.sendFrameQueue()
+    // Sets the frames of the frame queue.
+    this.outFrameQueue.frames = [frame]
+    // If the priority is immediate, send the frame queue.
+    if (priority === PacketPriority.Immediate) return this.sendFrameQueue()
+  }
+
+  public sendFrameQueue(): void {
+    // Checks if there are any frames in the queue, if not, return.
+    if (!this.outFrameQueue?.frames?.length) return
+    // Set the sequence of the frame queue.
+    this.outFrameQueue.sequence = this.outFrame++
+    // Send the frame queue.
+    this.sendFrameSet(this.outFrameQueue)
+    // Set the frame queue to a new frame set.
+    this.outFrameQueue = new FrameSet()
+  }
+
+  public sendFrameSet(frameSet: FrameSet): void {
+    // Send the frame set.
+    this.client.send(frameSet.serialize())
+    // Set the frame set to the backup queue.
+    this.outFrameBackupQueue.set(frameSet.sequence, frameSet.frames.filter(x => x.isReliable()))
+  }
+
   public handleFrameSet(frameSet: FrameSet): void {
-    // Checks if the frame set is a duplicate
-    if (this.receivedFrames.has(frameSet.sequence)) {
-      this.raknet.emit('Error', `Received duplicate frame set ${frameSet.sequence} from ${this.client.remote.address}:${this.client.remote.port}`)
-      return
-    }
+    if (this.receivedFrames.has(frameSet.sequence)) return console.log('TODO: Handle duplicate frame set')
 
-    // If the frame was marked as lost, remove it from the lost frames set.
-    if (this.lostFrames.has(frameSet.sequence))
-      this.lostFrames.delete(frameSet.sequence)
+    this.lostFrames.delete(frameSet.sequence)
 
-    // Checks if the frame is out of order
     if (
-      frameSet.sequence < this.lastFrame &&
-      this.lastFrame - frameSet.sequence < 32
-    ) {
-      this.raknet.emit('Error', `Received out of order frame set ${frameSet.sequence} from ${this.client.remote.address}:${this.client.remote.port}`)
-      return
-    }
+      frameSet.sequence < this.lastFrame ||
+      frameSet.sequence === this.lastFrame
+    ) return console.log('TODO: Handle out of order frame set')
 
-    // Checks if the frame is too old
-    if (frameSet.sequence < this.lastFrame - 32) {
-      this.raknet.emit('Error', `Received too old frame set ${frameSet.sequence} from ${this.client.remote.address}:${this.client.remote.port}`)
-      return
-    }
-
-    // Add the frame set to the received frames set
     this.receivedFrames.add(frameSet.sequence)
+    const difference = frameSet.sequence - this.lastFrame
 
-    // Checks if the frame set is the next frame set
-    if ((frameSet.sequence - this.lastFrame) !== 1) {
-      // Add the lost frame to the lost frames set
-      for (let i = 1; i < (frameSet.sequence - this.lastFrame); i++) {
-        this.lostFrames.add(this.lastFrame + i)
+    if (difference !== 1) {
+      for (let i = this.lastFrame + 1; i < frameSet.sequence; i++) {
+        if (!this.receivedFrames.has(i)) {
+          this.lostFrames.add(i)
+        }
       }
     }
 
-    // Updates the last frame
     this.lastFrame = frameSet.sequence
 
-    // Handle the frames
-    for (const frame of frameSet.frames.values()) {
+    for (const frame of frameSet.frames) {
       this.handleFrame(frame)
     }
   }
@@ -107,7 +125,7 @@ class Framer {
         // Checks if the fragment queue is complete
         if (value.size === frame.fragmentSize) {
           const stream = new BinaryStream()
-          for (let i = 0; i < frame.fragmentSize; i++) {
+          for (let i = 0; i < value.size; i++) {
             const split = value.get(i)!
             stream.write(split.body)
           }
@@ -116,20 +134,23 @@ class Framer {
           const newFrame = new Frame()
           newFrame.body = stream.getBuffer()
           newFrame.reliability = frame.reliability
-          newFrame.orderingChannel = frame.orderingChannel
-          newFrame.orderingIndex = frame.orderingIndex
-          newFrame.sequenceIndex = frame.sequenceIndex
           newFrame.reliableIndex = frame.reliableIndex
+          newFrame.sequenceIndex = frame.sequenceIndex
+          newFrame.orderingIndex = frame.orderingIndex
+          newFrame.orderingChannel = frame.orderingChannel
           this.fragmentQueue.delete(frame.fragmentId)
-          
+
           return this.handleFrame(newFrame)
         }
       }
     } else if (frame.isSequenced()) {
-      if (frame.sequenceIndex < this.inHighestIndex[frame.orderingChannel] || frame.orderingIndex < this.inOrderingIndex[frame.orderingChannel]) {
-        this.raknet.emit('Error', `Received out of order sequenced frame ${frame.sequenceIndex} from ${this.client.remote.address}:${this.client.remote.port}`)
-        return
-      }
+      if (
+        frame.sequenceIndex < this.inHighestIndex[frame.orderingChannel] ||
+        frame.orderingIndex < this.inOrderingIndex[frame.orderingChannel]
+        ) return
+        console.log('got here')
+        this.inHighestIndex[frame.orderingChannel] = frame.sequenceIndex + 1
+        this.handlePacket(frame)
     } else if (frame.isOrdered()) {
       if (frame.orderingIndex === this.inOrderingIndex[frame.orderingChannel]) {
         this.inHighestIndex[frame.orderingChannel] = 0
@@ -155,37 +176,10 @@ class Framer {
     }
   }
 
-  public framePacket(buffer: Buffer): FrameSet | void {
-    // Create the new frame
-    const frame = new Frame()
-    frame.reliability = PacketReliability.Unreliable
-    frame.orderingChannel = 0
-    frame.body = buffer
-    // TODO: handle sequence
-    if (frame.isSequenced()) return console.log('Sequenced packets are not supported yet.')
-    if (frame.isOrderExclusive()) return console.log('Order exclusive packets are not supported yet.')
-
-    frame.reliability = this.outFrameReliability++
-
-    const mtu = this.client.mtuSize - 6 - 23
-    // TODO: handle fragmentation
-    if (frame.body.byteLength > mtu) return console.log('Fragmentation is not supported yet.')
-
-    // Create the new frame set
-    const frameSet = new FrameSet()
-    frameSet.sequence = this.outFrame++
-    frameSet.frames = [frame]
-
-    // Add the frame set to the out frame sets
-    this.outFrameSets.set(frameSet.sequence, { frameSet, ping: BigInt(Date.now()) })
-
-    return frameSet
-  }
-
   public async handlePacket(frame: Frame): Promise<void> {
     switch(frame.body[0]) {
       default:
-        this.raknet.emit('Error', `Unhandled packet with id 0x${frame.body[0].toString(16)} from ${this.client.remote.address}:${this.client.remote.port}`)
+        this.raknet.emit('Encapsulated', frame.body, this.client)
         break
       case ConnectionRequest.id:
         return this.handleConnectionRequest(new ConnectionRequest(frame.body).deserialize())
@@ -195,26 +189,18 @@ class Framer {
         return this.handleNewIncomingConnection()
       case Disconnect.id:
         return this.handleDisconnect()
-      case GameByte:
-        this.raknet.emit('Encapsulated', frame.body, this.client)
-        break
     }
   }
 
   public handleAck(ack: Ack): void {
     for (const sequence of ack.sequences) {
-      const entry = this.outFrameSets.get(sequence)
-      if (!entry) {
-        this.raknet.emit('Error', `Received ack for unknown sequence ${sequence} from ${this.client.remote.address}:${this.client.remote.port}`)
-        return
-      }
-      this.outFrameSets.delete(sequence)
-      // TODO: possible to make better?
-      if (entry.ping) {
-        const pingTime = Number(entry.ping)
-        const current = Number(BigInt(Date.now()))
-        this.client.ping = current - pingTime
-      }
+      this.outFrameBackupQueue.delete(sequence)
+    }
+  }
+
+  public handleNack(nack: Nack): void {
+    for (const sequence of nack.sequences) {
+      console.log('TODO Nack', sequence)
     }
   }
 
@@ -227,14 +213,8 @@ class Framer {
     accepted.clientAddress = { address: this.client.remote.address, port: this.client.remote.port, version: 4 }
     accepted.requestTime = request.time
     accepted.time = BigInt(Date.now())
-    // Frame the packet
-    const frameSet = this.framePacket(accepted.serialize())
-    if (!frameSet) {
-      this.raknet.emit('Error', 'Failed to frame connection request accepted packet.')
-      return
-    }
-    // Send the connection request accepted packet to the client.
-    this.client.send(frameSet.serialize())
+
+    this.client.sendFrame(accepted.serialize(), 1)
   }
 
   public async handleConnectedPing(ping: ConnectedPing): Promise<void> {
@@ -242,14 +222,7 @@ class Framer {
     const pong = new ConnectedPong()
     pong.pingTime = ping.time
     pong.pongTime = BigInt(Date.now())
-    // Frame the packet
-    const frameSet = this.framePacket(pong.serialize())
-    if (!frameSet) {
-      this.raknet.emit('Error', 'Failed to frame connected pong packet.')
-      return
-    }
-    // Send the connected pong packet to the client.
-    this.client.send(frameSet.serialize())
+    this.client.sendFrame(pong.serialize())
   }
 
   public async handleNewIncomingConnection(): Promise<void> {

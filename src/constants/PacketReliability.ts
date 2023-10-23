@@ -5,10 +5,8 @@ enum PacketReliability {
   ReliableOrdered,
   ReliableSequenced,
   UnreliableWithAckReceipt,
-  UnreliableSequencedWithAckReceipt,
   ReliableWithAckReceipt,
   ReliableOrderedWithAckReceipt,
-  ReliableSequencedWithAckReceipt,
 }
 
 export {

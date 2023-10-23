@@ -13,7 +13,7 @@ class Frames extends DataType {
   }
   public static write(stream: BinaryStream, frames: Frame[]): void {
     for (const frame of frames.values()) {
-      stream.write(frame.serialize().getBuffer())
+      stream.write(frame.serialize())
     }
   }
 }
