@@ -12,7 +12,7 @@
   "author": "SerenityJS",
   "license": "MIT",
   "dependencies": {
-    "binarystream.js": "^0.2.0",
+    "binarystream.js": "^0.2.1",
     "cross-env": "^7.0.3",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^10.9.1",
