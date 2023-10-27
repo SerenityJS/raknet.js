@@ -54,13 +54,14 @@ class Framer {
     }
   }
 
-  public addFrameToQueue(frame: Frame, priority: PacketPriority): void {
+  public addFrameToQueue(frame: Frame, priority: PacketPriority = PacketPriority.Normal): void {
     let length = 4
     // Checks if the frame size is larger then the mtu size.
     for (const x of this.outFrameQueue?.frames ?? []) length += x.getByteLength()
     if (length + frame.getByteLength() > this.client.mtuSize - 36) this.sendFrameQueue()
     // Sets the frames of the frame queue.
-    this.outFrameQueue.frames = [frame]
+    if (!this.outFrameQueue.frames) this.outFrameQueue.frames = []
+    this.outFrameQueue.frames.push(frame)
     // If the priority is immediate, send the frame queue.
     if (priority === PacketPriority.Immediate) return this.sendFrameQueue()
   }

@@ -1,7 +1,7 @@
 import type { RemoteInfo } from 'node:dgram'
 import type { Raknet } from '../Raknet'
 
-import { Bitflags, PacketPriority } from '../constants'
+import { Bitflags, PacketPriority, PacketReliability } from '../constants'
 import { Framer } from '../framer'
 import {
   Ack,
@@ -107,10 +107,10 @@ class Client {
     this.framer.sendFrameQueue()
   }
 
-  public sendFrame(buffer: Buffer, priority: PacketPriority = PacketPriority.Normal): void {
+  public sendFrame(buffer: Buffer, priority: PacketPriority = PacketPriority.Normal, reliability: PacketReliability = PacketReliability.Unreliable): void {
     // Create Frame
     const frame = new Frame()
-    frame.reliability = 0
+    frame.reliability = reliability
     frame.orderingChannel = 0
     frame.body = buffer
 
