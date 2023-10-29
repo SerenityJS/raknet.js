@@ -1,6 +1,6 @@
-import 'reflect-metadata'
+import 'reflect-metadata';
 
-export * from './Raknet'
-export * from './client'
-export * from './packets'
-export * from './constants'
+export * from './Raknet';
+export * from './packets';
+export * from './constants';
+export * from './session';

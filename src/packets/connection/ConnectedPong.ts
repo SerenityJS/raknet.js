@@ -1,12 +1,10 @@
-import { Packet, DataPacket, Serialize } from '../DataPacket'
-import { Long } from 'binarystream.js'
+import { Long } from 'binarystream.js';
+import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x03)
 class ConnectedPong extends DataPacket {
-  @Serialize(Long) public pingTime!: bigint
-  @Serialize(Long) public pongTime!: bigint
+	@Serialize(Long) public pingTimestamp!: bigint;
+	@Serialize(Long) public timestamp!: bigint;
 }
 
-export {
-  ConnectedPong,
-}
+export { ConnectedPong };

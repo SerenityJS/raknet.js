@@ -1,12 +1,10 @@
-import { Packet, DataPacket, Serialize } from '../DataPacket'
-import { Long } from 'binarystream.js'
+import { Long } from 'binarystream.js';
+import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x09)
 class ConnectionRequest extends DataPacket {
-  @Serialize(Long) public clientGuid!: bigint
-  @Serialize(Long) public time!: bigint
+	@Serialize(Long) public clientGuid!: bigint;
+	@Serialize(Long) public timestamp!: bigint;
 }
 
-export {
-  ConnectionRequest,
-}
+export { ConnectionRequest };

@@ -1,70 +1,75 @@
-import { BinaryStream, DataType, Endianness, UInt8 } from 'binarystream.js'
+import type { Buffer } from 'node:buffer';
+import type { DataType } from 'binarystream.js';
+import { BinaryStream, Endianness, UInt8 } from 'binarystream.js';
+
+interface PacketMetadata {
+	endian: Endianness;
+	name: string;
+	type: typeof DataType;
+}
 
 abstract class DataPacket extends BinaryStream {
-  public static id: number
-  
-  public constructor(buffer?: Buffer) {
-    super(buffer)
-  }
+	public static id: number;
 
-  public getId(): number {
-    throw new Error('Packet.getId() is not implemented.')
-  }
+	public constructor(buffer?: Buffer) {
+		super(buffer);
+	}
 
-  public serialize(): Buffer {
-    throw new Error('Packet.serialize() is not implemented.')
-  }
+	public getId(): number {
+		throw new Error('Packet.getId() is not implemented.');
+	}
 
-  public deserialize(): this {
-    throw new Error('Packet.deserialize() is not implemented.')
-  }
+	public serialize(): Buffer {
+		throw new Error('Packet.serialize() is not implemented.');
+	}
+
+	public deserialize(): this {
+		throw new Error('Packet.deserialize() is not implemented.');
+	}
 }
 
 function Packet(id: number, type: typeof DataType = UInt8) {
-  return function(target: typeof DataPacket) {
-    target.id = id
-    const metadata = Reflect.getOwnMetadata('properties', target.prototype) as { name: string, type: typeof DataType, endian: Endianness }[]
-    const properties = Object.getOwnPropertyNames(target.prototype)
+	return function (target: typeof DataPacket) {
+		target.id = id;
+		const metadata: PacketMetadata[] = Reflect.getOwnMetadata('properties', target.prototype);
+		const properties = Object.getOwnPropertyNames(target.prototype);
+		if (!properties.includes('serialize'))
+			target.prototype.serialize = function () {
+				type.write(this, target.id);
+				if (!metadata) return this.getBuffer();
+				for (const { name, type, endian } of metadata) {
+					type.write(this, (this as any)[name], endian);
+				}
 
-    if (!properties.includes('serialize'))
-      target.prototype.serialize = function() {
-        type.write(this, target.id)
-        if (!metadata) return this.getBuffer()
-        for (const { name, type, endian } of metadata) {
-          type.write(this, (this as any)[name], endian)
-        }
+				return this.getBuffer();
+			};
 
-        return this.getBuffer()
-      }
-    if (!properties.includes('deserialize'))
-      target.prototype.deserialize = function() {
-        type.read(this)
-        if (!metadata) return this
-        for (const { name, type, endian } of metadata) {
-          (this as any)[name] = type.read(this, endian)
-        }
+		if (!properties.includes('deserialize'))
+			target.prototype.deserialize = function () {
+				type.read(this);
+				if (!metadata) return this;
+				for (const { name, type, endian } of metadata) {
+					(this as any)[name] = type.read(this, endian);
+				}
 
-        return this
-      }
-    if (!properties.includes('getId'))
-      target.prototype.getId = function() {
-        return target.id
-      }
-  }
+				return this;
+			};
+
+		if (!properties.includes('getId'))
+			target.prototype.getId = function () {
+				return target.id;
+			};
+	};
 }
 
-function Serialize(type: typeof DataType | typeof String, endian: Endianness = Endianness.Big) {
-  if (!type) throw new Error('Type is required')
+function Serialize(type: typeof DataType, endian: Endianness = Endianness.Big) {
+	if (!type) throw new Error('Type is required');
 
-  return function(target: any, name: string) {
-    const properties = Reflect.getOwnMetadata('properties', target) || []
-    properties.push({ name, type, endian })
-    Reflect.defineMetadata('properties', properties, target)
-  }
+	return function (target: any, name: string) {
+		const properties = Reflect.getOwnMetadata('properties', target) || [];
+		properties.push({ name, type, endian });
+		Reflect.defineMetadata('properties', properties, target);
+	};
 }
 
-export {
-  DataPacket,
-  Packet,
-  Serialize,
-}
+export { DataPacket, Packet, Serialize };

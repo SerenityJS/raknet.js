@@ -1,12 +1,10 @@
-import { Packet, DataPacket, Serialize } from '../DataPacket'
-import { Address } from '../types'
+import { ServerAddress, Address } from '../../types';
+import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x13)
 class NewIncomingConnection extends DataPacket {
-  @Serialize(Address) public serverAddress!: bigint
-  @Serialize(Address) public internalAddress!: bigint
+	@Serialize(Address) public serverAddress!: ServerAddress;
+	@Serialize(Address) public internalAddress!: ServerAddress;
 }
 
-export {
-  NewIncomingConnection,
-}
+export { NewIncomingConnection };

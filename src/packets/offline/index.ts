@@ -1,4 +1,7 @@
-export * from './UnconnectedPing'
-export * from './UnconnectedPong'
-
-export * from './connection'
+export * from './UnconnectedPing';
+export * from './UnconnectedPong';
+export * from './IncompatibleProtocol';
+export * from './OpenConnectionRequest1';
+export * from './OpenConnectionReply1';
+export * from './OpenConnectionRequest2';
+export * from './OpenConnectionReply2';

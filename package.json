@@ -1,30 +1,43 @@
 {
-  "name": "@serenityjs/raknet.js",
-  "version": "1.0.2",
-  "description": "Raknet in TS",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "start": "cross-env NODE_ENV=production node dist/index.js",
-    "dev": "cross-env NODE_ENV=development ts-node src/index.ts"
-  },
-  "author": "SerenityJS",
-  "license": "MIT",
-  "dependencies": {
-    "binarystream.js": "^0.2.2",
-    "cross-env": "^7.0.3",
-    "reflect-metadata": "^0.1.13",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
-  },
-  "typings": "./dist/index.d.ts",
-  "module": "./dist/index.js",
-  "exports": {
-    "import": "./dist/index.js",
-    "require": "./dist/index.js"
-  },
-  "files": [
-    "dist"
-  ]
+	"name": "@serenityjs/raknet.js",
+	"version": "1.1.0",
+	"description": "Raknet in TS",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "tsc",
+		"start": "cross-env NODE_ENV=production node dist/index.js",
+		"dev": "cross-env NODE_ENV=development ts-node src/index.ts"
+	},
+	"author": "SerenityJS",
+	"license": "MIT",
+	"dependencies": {
+		"binarystream.js": "^0.2.2",
+		"reflect-metadata": "^0.1.13"
+	},
+	"devDependencies": {
+		"@types/eslint": "^8.44.0",
+		"@types/jsonwebtoken": "^9",
+		"@types/node": "^20.4.2",
+		"@types/prettier": "^2.7.3",
+		"cross-env": "^7.0.3",
+		"eslint": "^8.45.0",
+		"eslint-config-neon": "^0.1.47",
+		"eslint-formatter-pretty": "^5.0.0",
+		"husky": "^8.0.3",
+		"lint-staged": "^13.2.3",
+		"nodemon": "^3.0.1",
+		"prettier": "^3.0.0",
+		"ts-node": "^10.9.1",
+		"typescript": "^5.1.6"
+	},
+	"typings": "./dist/index.d.ts",
+	"module": "./dist/index.js",
+	"exports": {
+		"import": "./dist/index.js",
+		"require": "./dist/index.js"
+	},
+	"files": [
+		"dist"
+	]
 }

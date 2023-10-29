@@ -1,129 +1,105 @@
-import { Bitflags, udpHeaderSize, maxMtuSize } from './constants'
-import { OfflineClient, Client, ClientStatus } from './client'
-import { Socket, createSocket, RemoteInfo } from 'node:dgram'
-import { EventEmitter } from './utils'
-
-import {
-  UnconnectedPing,
-  OpenConnectionRequest1,
-  OpenConnectionRequest2,
-  ConnectionRequest,
-} from './packets'
-
-enum Gamemode {
-  Survival,
-  Creative,
-  Adventure,
-  Spectator,
-}
+import { Buffer } from 'node:buffer';
+import type { Socket, RemoteInfo } from 'node:dgram';
+import { createSocket } from 'node:dgram';
+import { setInterval, clearInterval } from 'node:timers';
+import { Offline } from './Offline';
+import { RaknetTickLength, Bitflags } from './constants';
+import type { Session } from './session';
+import { EventEmitter } from './utils';
 
 interface RaknetEvents {
-  Binary: [Buffer, RemoteInfo]
-  UnconnectedPing: [UnconnectedPing, RemoteInfo]
-  OpenConnectionRequest1: [OpenConnectionRequest1, RemoteInfo]
-  OpenConnectionRequest2: [OpenConnectionRequest2, RemoteInfo]
-  ConnectionRequest: [ConnectionRequest, Client]
-  ClientConnected: [Client]
-  ClientDisconnected: [Client, ClientStatus]
-  Encapsulated: [Buffer, Client]
-  Error: [...string[]]
-  Listening: []
-  Close: []
+	Connect: [Session];
+	Disconnect: [Session];
+	Encapsulated: [Session, Buffer];
 }
 
 class Raknet extends EventEmitter<RaknetEvents> {
-  public readonly protocol: number
-  public readonly version: string
-  public readonly maxClients: number
-  public readonly socket: Socket = createSocket('udp4')
-  public readonly guid: bigint = Buffer.allocUnsafe(8).readBigInt64BE()
-  public readonly tps = 10
-  public readonly clients = new Map<bigint, Client>()
+	protected readonly socket: Socket;
+	public readonly protocol: number;
+	public readonly version: string;
+	public readonly guid: bigint;
+	public readonly sessions: Map<string, Session>;
+	public motd: string;
 
-  public motd = 'Raknet.js'
-  public gamemode = Gamemode.Survival
-  protected interval: NodeJS.Timeout | null = null
+	protected address: string | null = null;
+	protected port: number | null = null;
+	protected timer: NodeJS.Timeout | null = null;
+	public maxSessions: number;
 
-  public constructor(protocol: number, version: string, maxClients: number = 20) {
-    super()
-    this.protocol = protocol
-    this.version = version
-    this.maxClients = maxClients
-  }
+	public constructor(protocol: number, version: string, motd?: string, maxSessions?: number) {
+		super();
+		this.protocol = protocol;
+		this.version = version;
+		this.motd = motd ?? 'Raknet.js';
+		this.maxSessions = maxSessions ?? 10;
+		this.socket = createSocket('udp4');
+		this.guid = Buffer.allocUnsafe(8).readBigInt64BE();
+		this.sessions = new Map();
+		Offline.raknet = this;
+	}
 
-  public start(address: string, port: number = 19132): Raknet {
-    try {
-      // Bind to the port
-      this.socket.bind(port, address)//.unref()
-        // Bind the listeners
-        .on('listening', this.emit.bind(this, 'Listening'))
-        .on('close', this.emit.bind(this, 'Close'))
-        .on('error', (error: Error) => {
-          this.emit('Error', error.message, error.stack!)
-        })
-        .on('message', this.incoming.bind(this))
-      // Starts the raknet ticking interval
-      this.interval = setInterval(this.tick.bind(this), this.tps)
+	public start(address: string, port: number): boolean {
+		try {
+			this.socket.bind(port, address, this.listening.bind(this));
+			this.address = address;
+			this.port = port;
+			this.timer = setInterval(this.tick.bind(this), 10);
+			return true;
+		} catch {
+			return false;
+		}
+	}
 
-      return this
-    } catch (error: any) {
-      this.emit('Error', error)
+	private listening(): void {
+		this.socket.on('message', this.incoming.bind(this));
+	}
 
-      return this
-    }
-  }
+	public stop(): boolean {
+		try {
+			if (this.timer) clearInterval(this.timer!);
+			this.socket.close();
+			return true;
+		} catch {
+			return false;
+		}
+	}
 
-  public stop(): Raknet {
-    // Close the socket
-    this.socket.close()
-    // Clear the interval
-    if (this.interval) clearInterval(this.interval!)
-    // Disconnect all clients
-    for (const client of this.clients.values()) {
-      client.disconnect()
-    }
+	public getAddress(): string | null {
+		return this.address;
+	}
 
-    return this
-  }
+	public getPort(): number | null {
+		return this.port;
+	}
 
-  public tick(): void {
-    for (const client of this.clients.values()) {
-      // Checks if the client is in the process of disconnecting or is already disconnected.
-      if (
-        client.status === ClientStatus.Disconnecting || 
-        client.status === ClientStatus.Disconnected
-      ) continue
-      
-      // Tick the client
-      client.tick()
-    }
-  }
+	private tick(): void {
+		for (const session of this.sessions.values()) {
+			session.tick();
+		}
+	}
 
-  public send(buffer: Buffer, address: string, port: number): void {
-    // Send raw data to the specified address and port.
-    this.socket.send(buffer, port, address)
-  }
+	public send(buffer: Buffer, remote: RemoteInfo): void {
+		this.socket.send(buffer, remote.port, remote.address);
+	}
 
-  public async incoming(buffer: Buffer, remote: RemoteInfo): Promise<void> {
-    // Emit the binary event, if not, return.
-    const event = await this.emit('Binary', buffer, remote)
-    if (!event) return
+	public async incoming(buffer: Buffer, remote: RemoteInfo): Promise<void> {
+		// Assemble the players session key.
+		const key = `${remote.address}:${remote.port}`;
+		// Check if the player has a session.
+		const session = this.sessions.get(key);
+		// If there is a session, let the session handle the packet.
+		if (session && (buffer[0] & Bitflags.Valid) !== 0) return session.incoming(buffer);
+		// check if we got an offline packet from a session
+		if ((buffer[0] & Bitflags.Valid) !== 0) return console.log('Got offline packet from a session');
+		// Handle the offline buffer.
+		return Offline.incoming(buffer, remote);
+	}
 
-    // Get the client, if not, handle offline client.
-    const client = [...this.clients.values()].find((x) => x.remote.address === remote.address && x.remote.port === remote.port)
-
-    // If a client exsis, let the client handle the incoming packet.
-    if (client && (buffer[0] & Bitflags.Valid) !== 0) return client.incoming(buffer)
-
-    // Check if we got an offline packet from a online user.
-    if ((buffer[0] & Bitflags.Valid) !== 0) return
-
-    // Handle the offline client.
-    return OfflineClient.incoming(this, buffer, remote)
-  }
+	public disconnect(remote: RemoteInfo): void {
+		const str = '\u0000\u0000\u0008\u0015';
+		const buff = Buffer.from(str, 'binary');
+		this.socket.send(buff, remote.port, remote.address);
+	}
 }
 
-export {
-  Raknet,
-  Gamemode,
-}
+export { Raknet };

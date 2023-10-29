@@ -1,16 +1,14 @@
-import { Packet, DataPacket, Serialize } from '../DataPacket'
-import { Long, Short } from 'binarystream.js'
-import { Address, SysAddress } from '../types'
+import { Long, Short } from 'binarystream.js';
+import { ServerAddress, Address, SystemAddress } from '../../types';
+import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x10)
 class ConnectionRequestAccepted extends DataPacket {
-  @Serialize(Address) public clientAddress!: { address: string, port: number, version: number }
-  @Serialize(Short) public systemIndex!: number
-  @Serialize(SysAddress) public systemAddresses!: { address: string, port: number, version: number }[]
-  @Serialize(Long) public requestTime!: bigint
-  @Serialize(Long) public time!: bigint
+	@Serialize(Address) public clientAddress!: ServerAddress;
+	@Serialize(Short) public systemIndex!: number;
+	@Serialize(SystemAddress) public systemAddresses!: ServerAddress[];
+	@Serialize(Long) public requestTimestamp!: bigint;
+	@Serialize(Long) public timestamp!: bigint;
 }
 
-export {
-  ConnectionRequestAccepted,
-}
+export { ConnectionRequestAccepted };
