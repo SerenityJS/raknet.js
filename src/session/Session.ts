@@ -370,7 +370,7 @@ class Session {
 		}
 	}
 
-	public addFrameToQueue(frame: Frame, priority: Priority): void {
+	private addFrameToQueue(frame: Frame, priority: Priority): void {
 		let length = 4;
 		// Add the length of the frame to the length
 		for (const queuedFrame of this.outputFrameQueue.frames) {
@@ -389,7 +389,7 @@ class Session {
 		if (priority === Priority.Immediate) return this.sendFrameQueue();
 	}
 
-	public sendFrameQueue(): void {
+	private sendFrameQueue(): void {
 		// Check if the queue is empty
 		if (this.outputFrameQueue.frames.length > 0) {
 			// Set the sequence of the frame set

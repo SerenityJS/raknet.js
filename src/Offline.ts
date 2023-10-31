@@ -102,7 +102,7 @@ class Offline {
 		reply.mtu = request.mtu;
 		reply.useEncryption = false;
 
-		const session = new Session(this.raknet, remote, reply.mtu, this.raknet.guid);
+		const session = new Session(this.raknet, remote, reply.mtu, request.clientGuid);
 		this.raknet.sessions.set(`${remote.address}:${remote.port}`, session);
 
 		// Send the reply packet.

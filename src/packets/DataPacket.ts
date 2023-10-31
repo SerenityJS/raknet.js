@@ -5,6 +5,7 @@ import { BinaryStream, Endianness, UInt8 } from 'binarystream.js';
 interface PacketMetadata {
 	endian: Endianness;
 	name: string;
+	testField?: string;
 	type: typeof DataType;
 }
 
@@ -37,8 +38,13 @@ function Packet(id: number, type: typeof DataType = UInt8) {
 			target.prototype.serialize = function () {
 				type.write(this, target.id);
 				if (!metadata) return this.getBuffer();
-				for (const { name, type, endian } of metadata) {
-					type.write(this, (this as any)[name], endian);
+				for (const { name, type, endian, testField } of metadata) {
+					if (testField) {
+						const value = (this as any)[testField!];
+						type.write(this, (this as any)[name], endian, value);
+					} else {
+						type.write(this, (this as any)[name], endian);
+					}
 				}
 
 				return this.getBuffer();
@@ -48,8 +54,13 @@ function Packet(id: number, type: typeof DataType = UInt8) {
 			target.prototype.deserialize = function () {
 				type.read(this);
 				if (!metadata) return this;
-				for (const { name, type, endian } of metadata) {
-					(this as any)[name] = type.read(this, endian);
+				for (const { name, type, endian, testField } of metadata) {
+					if (testField) {
+						const value = (this as any)[testField!];
+						(this as any)[name] = type.read(this, endian, value);
+					} else {
+						(this as any)[name] = type.read(this, endian);
+					}
 				}
 
 				return this;
@@ -62,12 +73,12 @@ function Packet(id: number, type: typeof DataType = UInt8) {
 	};
 }
 
-function Serialize(type: typeof DataType, endian: Endianness = Endianness.Big) {
+function Serialize(type: typeof DataType, endian: Endianness = Endianness.Big, testField?: string) {
 	if (!type) throw new Error('Type is required');
 
 	return function (target: any, name: string) {
 		const properties = Reflect.getOwnMetadata('properties', target) || [];
-		properties.push({ name, type, endian });
+		properties.push({ name, type, endian, testField });
 		Reflect.defineMetadata('properties', properties, target);
 	};
 }
