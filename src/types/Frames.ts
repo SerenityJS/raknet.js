@@ -1,6 +1,6 @@
-import type { BinaryStream } from 'binarystream.js';
-import { DataType } from 'binarystream.js';
+import type { BinaryStream } from '@serenityjs/binarystream';
 import { Frame } from '../packets';
+import { DataType } from './DataType';
 
 class Frames extends DataType {
 	public static override read(stream: BinaryStream): Frame[] {
@@ -15,7 +15,7 @@ class Frames extends DataType {
 
 	public static override write(stream: BinaryStream, value: Frame[]): void {
 		for (const frame of value) {
-			stream.write(frame.serialize());
+			stream.writeBuffer(frame.serialize());
 		}
 	}
 }

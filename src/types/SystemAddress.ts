@@ -1,8 +1,7 @@
-import { Buffer } from 'node:buffer';
-import type { BinaryStream } from 'binarystream.js';
-import { DataType } from 'binarystream.js';
+import type { BinaryStream } from '@serenityjs/binarystream';
 import type { ServerAddress } from './Address';
 import { Address } from './Address';
+import { DataType } from './DataType';
 
 class SystemAddress extends DataType {
 	public static override read(stream: BinaryStream): ServerAddress[] {

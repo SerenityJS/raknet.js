@@ -1,6 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { Long, Bool, Short } from 'binarystream.js';
-import { Magic, Address } from '../../types';
+import { Long, Bool, Short, Magic, Address } from '../../types';
 import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x08)

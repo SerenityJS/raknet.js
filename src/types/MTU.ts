@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
-import type { BinaryStream } from 'binarystream.js';
-import { DataType } from 'binarystream.js';
+import type { BinaryStream } from '@serenityjs/binarystream';
+import { DataType } from './DataType';
 
 class MTU extends DataType {
 	public static override read(stream: BinaryStream): number {
@@ -8,7 +8,7 @@ class MTU extends DataType {
 	}
 
 	public static override write(stream: BinaryStream, value: number): void {
-		stream.write(Buffer.alloc(value - stream.getBuffer().length));
+		stream.writeBuffer(Buffer.alloc(value - stream.getBuffer().length));
 	}
 }
 

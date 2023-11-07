@@ -1,5 +1,5 @@
-import type { BinaryStream } from 'binarystream.js';
-import { DataType } from 'binarystream.js';
+import type { BinaryStream } from '@serenityjs/binarystream';
+import { DataType } from './DataType';
 
 interface ServerAddress {
 	address: string;
@@ -9,7 +9,7 @@ interface ServerAddress {
 
 class Address extends DataType {
 	public static override read(stream: BinaryStream): ServerAddress {
-		const version = stream.readUInt8();
+		const version = stream.readUint8();
 		if (version === 4) {
 			const addressBuffer = stream.read(4);
 			const address = addressBuffer.map((byte) => (-byte - 1) & 0xff).join('.');
@@ -30,10 +30,10 @@ class Address extends DataType {
 
 	public static override write(stream: BinaryStream, value: ServerAddress): void {
 		const { address, port, version } = value;
-		stream.writeUInt8(version);
+		stream.writeUint8(version);
 		const addressBits = address.split('.', 4);
 		for (const bit of addressBits) {
-			stream.writeUInt8(-bit - 1);
+			stream.writeUint8(Number(bit));
 		}
 
 		stream.writeUShort(port);

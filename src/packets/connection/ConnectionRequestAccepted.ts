@@ -1,5 +1,4 @@
-import { Long, Short } from 'binarystream.js';
-import { ServerAddress, Address, SystemAddress } from '../../types';
+import { Long, Short, ServerAddress, Address, SystemAddress } from '../../types';
 import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x10)

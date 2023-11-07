@@ -1,7 +1,7 @@
 {
 	"name": "@serenityjs/raknet.js",
-	"version": "1.1.1",
-	"description": "Raknet in TS",
+	"version": "1.2.0",
+	"description": "Raknet package written in Typescript!",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
@@ -12,7 +12,7 @@
 	"author": "SerenityJS",
 	"license": "MIT",
 	"dependencies": {
-		"binarystream.js": "^0.2.4",
+		"@serenityjs/binarystream": "file:../binarystream",
 		"reflect-metadata": "^0.1.13"
 	},
 	"devDependencies": {

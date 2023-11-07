@@ -1,6 +1,8 @@
 import { Buffer } from 'node:buffer';
 import type { RemoteInfo } from 'node:dgram';
-import { BinaryStream } from 'binarystream.js';
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { BinaryStream } from '@serenityjs/binarystream';
 import type { Raknet } from '../Raknet';
 import { Priority, Bitflags, Status, Reliability } from '../constants';
 import type { DataPacket } from '../packets';
@@ -203,7 +205,7 @@ class Session {
 				// Loop through the fragments and write them to the stream
 				for (let i = 0; i < value.size; i++) {
 					const splitPacket = value.get(i)!;
-					stream.write(splitPacket.body);
+					stream.writeBuffer(splitPacket.body);
 				}
 
 				// Construct the new frame
@@ -415,6 +417,7 @@ class Session {
 	private handleConnectionRequest(packet: ConnectionRequest): void {
 		const accepted = new ConnectionRequestAccepted();
 		accepted.clientAddress = { address: this.remote.address, port: this.remote.port, version: 4 };
+		accepted.systemIndex = 0;
 		accepted.systemAddresses = [];
 		accepted.requestTimestamp = packet.timestamp;
 		accepted.timestamp = BigInt(Date.now());

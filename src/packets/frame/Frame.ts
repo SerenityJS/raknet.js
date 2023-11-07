@@ -1,5 +1,5 @@
 import type { Buffer } from 'node:buffer';
-import { BinaryStream, Endianness } from 'binarystream.js';
+import { BinaryStream, Endianness } from '@serenityjs/binarystream';
 import { Reliability, Bitflags } from '../../constants';
 
 class Frame {
@@ -30,15 +30,15 @@ class Frame {
 		stream.writeShort(this.body.byteLength << 3);
 
 		if (this.isReliable()) {
-			stream.writeUInt24(this.reliableIndex!, Endianness.Little);
+			stream.writeUint24(this.reliableIndex!, Endianness.Little);
 		}
 
 		if (this.isSequenced()) {
-			stream.writeUInt24(this.sequenceIndex!, Endianness.Little);
+			stream.writeUint24(this.sequenceIndex!, Endianness.Little);
 		}
 
 		if (this.isOrdered()) {
-			stream.writeUInt24(this.orderIndex!, Endianness.Little);
+			stream.writeUint24(this.orderIndex!, Endianness.Little);
 			stream.writeByte(this.orderChannel);
 		}
 
@@ -48,7 +48,7 @@ class Frame {
 			stream.writeInt32(this.fragmentIndex);
 		}
 
-		stream.write(this.body);
+		stream.writeBuffer(this.body);
 
 		return stream.getBuffer();
 	}
@@ -60,15 +60,15 @@ class Frame {
 		const length = Math.ceil(this.stream.readShort() / 8);
 
 		if (this.isReliable()) {
-			this.reliableIndex = this.stream.readUInt24(Endianness.Little);
+			this.reliableIndex = this.stream.readUint24(Endianness.Little);
 		}
 
 		if (this.isSequenced()) {
-			this.sequenceIndex = this.stream.readUInt24(Endianness.Little);
+			this.sequenceIndex = this.stream.readUint24(Endianness.Little);
 		}
 
 		if (this.isOrdered()) {
-			this.orderIndex = this.stream.readUInt24(Endianness.Little);
+			this.orderIndex = this.stream.readUint24(Endianness.Little);
 			this.orderChannel = this.stream.readByte();
 		}
 
@@ -78,7 +78,7 @@ class Frame {
 			this.fragmentIndex = this.stream.readInt32();
 		}
 
-		this.body = this.stream.read(length);
+		this.body = this.stream.readBuffer(length);
 
 		return this;
 	}

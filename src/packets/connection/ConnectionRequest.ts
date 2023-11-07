@@ -1,4 +1,4 @@
-import { Long } from 'binarystream.js';
+import { Long } from '../../types';
 import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x09)

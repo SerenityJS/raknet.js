@@ -4,142 +4,145 @@ export type Listener<T extends any[], R = unknown> = (...args: T) => Awaitable<R
 export type ForceArray<T> = T extends any[] ? T : never;
 
 export class EventEmitter<T> {
-  private readonly _beforeHooks = new Map<keyof T, Listener<ForceArray<T[any]>, boolean>[]>();
-  private readonly _afterHooks = new Map<keyof T, Listener<ForceArray<T[any]>>[]>();
-  private readonly _listeners = new Map<keyof T, Listener<ForceArray<T[any]>>[]>();
+	private readonly _beforeHooks = new Map<keyof T, Listener<ForceArray<T[any]>, boolean>[]>();
+	private readonly _afterHooks = new Map<keyof T, Listener<ForceArray<T[any]>>[]>();
+	private readonly _listeners = new Map<keyof T, Listener<ForceArray<T[any]>>[]>();
 
-  public constructor(private _maxListeners = 10) {}
+	public constructor(private _maxListeners = 10) {}
 
-  public get maxListeners(): number {
-    return this._maxListeners;
-  }
+	public get maxListeners(): number {
+		return this._maxListeners;
+	}
 
-  public set maxListeners(value: number) {
-    this._maxListeners = value;
-  }
+	public set maxListeners(value: number) {
+		this._maxListeners = value;
+	}
 
-  // Returns true if all listeners were called. Returns false if a before hook returned false.
-  public async emit<K extends keyof T>(event: K, ...args: ForceArray<T[K]>): Promise<boolean> {
-    const beforeHooks = this._beforeHooks.get(event) ?? [];
-    const listeners = this._listeners.get(event) ?? [];
-    const afterHooks = this._afterHooks.get(event) ?? [];
+	// Returns true if all listeners were called. Returns false if a before hook returned false.
+	public async emit<K extends keyof T>(event: K, ...args: ForceArray<T[K]>): Promise<boolean> {
+		const beforeHooks = this._beforeHooks.get(event) ?? [];
+		const listeners = this._listeners.get(event) ?? [];
+		const afterHooks = this._afterHooks.get(event) ?? [];
 
-    // TODO: Optional optimization point. Listeners can be called in parallel for promises.
-    for (const hook of beforeHooks) {
-      const result = await hook(...args);
-      if (result === false) return false;
-    }
+		// TODO: Optional optimization point. Listeners can be called in parallel for promises.
+		for (const hook of beforeHooks) {
+			const result = await hook(...args);
+			if (result === false) return false;
+		}
 
-    for (const listener of listeners) {
-      await listener(...args);
-    }
+		for (const listener of listeners) {
+			await listener(...args);
+		}
 
-    for (const hook of afterHooks) {
-      await hook(...args);
-    }
+		for (const hook of afterHooks) {
+			await hook(...args);
+		}
 
-    return true;
-  }
+		return true;
+	}
 
-  // Register utility to reduce duplication in code.
-  private _addListener<K extends keyof T>(
-    map: Map<keyof T, Listener<ForceArray<T[any]>>[]>,
-    event: K,
-    listener: Listener<ForceArray<T[K]>>
-  ): this {
-    const listeners = map.get(event) ?? [];
-    if (listeners.length >= this._maxListeners) {
-      console.trace(`warning: possible EventEmitter memory leak detected. ${listeners.length} listeners added. Use #setMaxListeners() to increase limit`);
-    }
-    map.set(event, [...listeners, listener]);
+	// Register utility to reduce duplication in code.
+	private _addListener<K extends keyof T>(
+		map: Map<keyof T, Listener<ForceArray<T[any]>>[]>,
+		event: K,
+		listener: Listener<ForceArray<T[K]>>,
+	): this {
+		const listeners = map.get(event) ?? [];
+		if (listeners.length >= this._maxListeners) {
+			console.trace(
+				`warning: possible EventEmitter memory leak detected. ${listeners.length} listeners added. Use #setMaxListeners() to increase limit`,
+			);
+		}
 
-    return this;
-  }
+		map.set(event, [...listeners, listener]);
 
-  private _addOnceListener<K extends keyof T>(
-    map: Map<keyof T, Listener<ForceArray<T[any]>>[]>,
-    event: K,
-    listener: Listener<ForceArray<T[K]>>
-  ): this {
-    const wrapper = (...args: ForceArray<T[K]>) => {
-      this._removeListener(map, event, wrapper);
-      return listener(...args);
-    }
+		return this;
+	}
 
-    return this._addListener(map, event, wrapper);
-  }
+	private _addOnceListener<K extends keyof T>(
+		map: Map<keyof T, Listener<ForceArray<T[any]>>[]>,
+		event: K,
+		listener: Listener<ForceArray<T[K]>>,
+	): this {
+		const wrapper = (...args: ForceArray<T[K]>) => {
+			this._removeListener(map, event, wrapper);
+			return listener(...args);
+		};
 
-  private _removeListener<K extends keyof T>(
-    map: Map<keyof T, Listener<ForceArray<T[any]>>[]>,
-    event: K,
-    listener: Listener<ForceArray<T[K]>>
-  ): this {
-    const listeners = map.get(event);
-    const index = listeners?.indexOf(listener);
-    if (index !== undefined && index !== -1) {
-      listeners?.splice(index, 1);
-    }
+		return this._addListener(map, event, wrapper);
+	}
 
-    return this
-  }
+	private _removeListener<K extends keyof T>(
+		map: Map<keyof T, Listener<ForceArray<T[any]>>[]>,
+		event: K,
+		listener: Listener<ForceArray<T[K]>>,
+	): this {
+		const listeners = map.get(event);
+		const index = listeners?.indexOf(listener);
+		if (index !== undefined && index !== -1) {
+			listeners?.splice(index, 1);
+		}
 
-  private _removeAllListeners<K extends keyof T>(map: Map<keyof T, Listener<ForceArray<T[any]>>[]>, event?: K): this {
-    if (event) {
-      map.delete(event);
-    } else {
-      map.clear();
-    }
+		return this;
+	}
 
-    return this
-  }
+	private _removeAllListeners<K extends keyof T>(map: Map<keyof T, Listener<ForceArray<T[any]>>[]>, event?: K): this {
+		if (event) {
+			map.delete(event);
+		} else {
+			map.clear();
+		}
 
-  public on<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
-    return this._addListener(this._listeners, event, listener);
-  }
+		return this;
+	}
 
-  public before<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>, boolean>): this {
-    return this._addListener(this._beforeHooks, event, listener);
-  }
+	public on<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
+		return this._addListener(this._listeners, event, listener);
+	}
 
-  public after<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
-    return this._addListener(this._afterHooks, event, listener);
-  }
+	public before<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>, boolean>): this {
+		return this._addListener(this._beforeHooks, event, listener);
+	}
 
-  public once<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
-    return this._addOnceListener(this._listeners, event, listener);
-  }
+	public after<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
+		return this._addListener(this._afterHooks, event, listener);
+	}
 
-  public onceBefore<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>, boolean>): this {
-    return this._addOnceListener(this._beforeHooks, event, listener);
-  }
+	public once<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
+		return this._addOnceListener(this._listeners, event, listener);
+	}
 
-  public onceAfter<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
-    return this._addOnceListener(this._afterHooks, event, listener);
-  }
+	public onceBefore<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>, boolean>): this {
+		return this._addOnceListener(this._beforeHooks, event, listener);
+	}
 
-  public remove<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
-    return this._removeListener(this._listeners, event, listener);
-  }
+	public onceAfter<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
+		return this._addOnceListener(this._afterHooks, event, listener);
+	}
 
-  public removeBefore<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>, boolean>): this {
-    return this._removeListener(this._beforeHooks, event, listener);
-  }
+	public remove<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
+		return this._removeListener(this._listeners, event, listener);
+	}
 
-  public removeAfter<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
-    return this._removeListener(this._afterHooks, event, listener);
-  }
+	public removeBefore<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>, boolean>): this {
+		return this._removeListener(this._beforeHooks, event, listener);
+	}
 
-  public removeAll<K extends keyof T>(event?: K): this {
-    return this._removeAllListeners(this._listeners, event);
-  }
+	public removeAfter<K extends keyof T>(event: K, listener: Listener<ForceArray<T[K]>>): this {
+		return this._removeListener(this._afterHooks, event, listener);
+	}
 
-  public removeAllBefore<K extends keyof T>(event?: K): this {
-    return this._removeAllListeners(this._beforeHooks, event);
-  }
+	public removeAll<K extends keyof T>(event?: K): this {
+		return this._removeAllListeners(this._listeners, event);
+	}
 
-  public removeAllAfter<K extends keyof T>(event?: K): this {
-    return this._removeAllListeners(this._afterHooks, event);
-  }
+	public removeAllBefore<K extends keyof T>(event?: K): this {
+		return this._removeAllListeners(this._beforeHooks, event);
+	}
+
+	public removeAllAfter<K extends keyof T>(event?: K): this {
+		return this._removeAllListeners(this._afterHooks, event);
+	}
 }
 
 export default EventEmitter;

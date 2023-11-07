@@ -1,6 +1,7 @@
 import type { Buffer } from 'node:buffer';
-import type { DataType } from 'binarystream.js';
-import { BinaryStream, Endianness, UInt8 } from 'binarystream.js';
+import { BinaryStream, Endianness } from '@serenityjs/binarystream';
+import { UInt8 } from '../types';
+import type { DataType } from '../types';
 
 interface PacketMetadata {
 	endian: Endianness;

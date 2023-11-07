@@ -1,6 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { UInt8, Long } from 'binarystream.js';
-import { Magic } from '../../types';
+import { UInt8, Long, Magic } from '../../types';
 import { DataPacket, Packet, Serialize } from '../DataPacket';
 
 @Packet(0x19)

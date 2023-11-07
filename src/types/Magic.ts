@@ -1,17 +1,17 @@
 import { Buffer } from 'node:buffer';
-import type { BinaryStream } from 'binarystream.js';
-import { DataType } from 'binarystream.js';
+import type { BinaryStream } from '@serenityjs/binarystream';
 import { MagicBytes } from '../constants';
+import { DataType } from './DataType';
 
 const MagicBuffer = Buffer.from(MagicBytes, 'binary');
 
 class Magic extends DataType {
 	public static override read(stream: BinaryStream): Buffer {
-		return stream.read(MagicBuffer.length);
+		return stream.readBuffer(MagicBuffer.length);
 	}
 
 	public static override write(stream: BinaryStream): void {
-		stream.write(MagicBuffer);
+		stream.writeBuffer(MagicBuffer);
 	}
 }
 
