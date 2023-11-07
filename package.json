@@ -12,7 +12,7 @@
 	"author": "SerenityJS",
 	"license": "MIT",
 	"dependencies": {
-		"@serenityjs/binarystream": "file:../binarystream",
+		"@serenityjs/binarystream": "^1.0.6",
 		"reflect-metadata": "^0.1.13"
 	},
 	"devDependencies": {
